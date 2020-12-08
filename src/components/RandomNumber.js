@@ -5,8 +5,8 @@ import React from 'react';
 export default RandomNumber = ({ id, number, disabled, onSelected }) => {
 
   const handlePress = () => {
-    console.log(number);
-    onSelected(id);
+    if (!disabled)
+      onSelected(id);
   };
 
   return (

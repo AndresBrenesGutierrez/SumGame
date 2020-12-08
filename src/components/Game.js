@@ -3,10 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import RandomNumber from './RandomNumber';
 
-export default Game = ({ randomNumbersCount = 4 }) => {
+let intervalId;
+
+export default Game = ({ randomNumbersCount = 4, initialSeconds }) => {
   const [ selectedNumbers, setSelectedNumbers ] = useState([]);
   const [ randomNumbers, setRandomNumbers ] = useState([]);
-  const [ target, setTarget ] = useState([]);
+  const [ target, setTarget ] = useState(10);
+  const [ remainingSeconds, setRemainingSeconds ] = useState(initialSeconds);
+  const [ gameStatus, setGameStatus ] = useState('PLAYING');
 
   useEffect(() => {
     const firstRandomNumbers = Array.from({ length: randomNumbersCount })
@@ -15,7 +19,17 @@ export default Game = ({ randomNumbersCount = 4 }) => {
       .reduce((acc, cur) => acc + cur, 0);
     setRandomNumbers(firstRandomNumbers);
     setTarget(firstTarget);
+    intervalId = setInterval(() => {
+      setRemainingSeconds(seconds => seconds - 1);
+    }, 1000);
+    return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    setGameStatus(getGameStatus());
+    if (remainingSeconds === 0 || gameStatus !== 'PLAYING')
+      clearInterval(intervalId);
+  }, [remainingSeconds, selectedNumbers]);
 
   const isNumberSelected = numberIndex =>
     selectedNumbers.some(number => number === numberIndex);
@@ -23,16 +37,30 @@ export default Game = ({ randomNumbersCount = 4 }) => {
   const selectNumber = number =>
     setSelectedNumbers([ ...selectedNumbers, number ]);
 
+  const getGameStatus = () => {
+    const sumSelected = selectedNumbers.reduce((acc, cur) => acc + randomNumbers[cur], 0);
+    // console.warn(sumSelected);
+    if (sumSelected > target || remainingSeconds === 0) {
+      return 'LOST';
+    } else if (sumSelected === target) {
+      return 'WON';
+    } else {
+      return 'PLAYING';
+    }
+  };
+
   return (
-    <View>
-      <Text style={styles.target}>{target}</Text>
+    <View style={styles.container}>
+      <Text style={[styles.target, styles[gameStatus]]}>{target}</Text>
+      <Text>{gameStatus}</Text>
+      <Text>{remainingSeconds}</Text>
       <View style={styles.randomContainer}>
         {randomNumbers.map((randomNumber, index) =>
           <RandomNumber
             id={index}
             key={index}
             number={randomNumber}
-            disabled={isNumberSelected(index)}
+            disabled={isNumberSelected(index) || gameStatus !== 'PLAYING'}
             onSelected={selectNumber} />
         )}
       </View>
@@ -41,6 +69,9 @@ export default Game = ({ randomNumbersCount = 4 }) => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   target: {
     fontSize: 40,
     backgroundColor: '#aaa',
@@ -52,4 +83,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  PLAYING: {
+    backgroundColor: '#bbb',
+  },
+  WON: {
+    backgroundColor: 'green',
+  },
+  LOST: {
+    backgroundColor: 'red',
+  }
 });
